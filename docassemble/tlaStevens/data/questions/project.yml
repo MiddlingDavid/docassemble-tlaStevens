@@ -1,0 +1,9 @@
+# block 1
+mandatory: true
+question: |
+  Hello, ${nameID}.  
+---
+# block 2
+question: What is your name?
+fields:
+  - Name: nameID
