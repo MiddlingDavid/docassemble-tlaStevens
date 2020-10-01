@@ -1,0 +1,71 @@
+mandatory: true
+question: |
+  Hello, ${ user.possessive('skeleton') }.
+Subquestion: |
+  
+  You live with ${ cohabitants} 's skeletons.
+
+  Your meat prison is aware of you: ${ user.skeleton_belief}.
+  
+  You are spooky: ${ user.spooky }.
+  
+  You are scary: ${ user.scary }.
+  
+  You ${ user.skeleton_action }. I think that's pretty neat.
+  
+  Your sigil is: ${ user.sigil }
+  
+---
+
+generic object: Individual
+question: |
+  What is ${ x.object_possessive('name') }?
+fields:
+  - First Name: x.name.first
+  - Second Name: x.name.last
+  
+---
+
+objects:
+  - user: Individual
+  - cohabitants: DAList.using(object_type=Individual)
+  
+---
+
+question: Do you live with anyone?
+yesno: cohabitants.there_are_any
+
+---
+
+question: Do you live with anyone else?
+yesno: cohabitants.there_is_another
+
+---
+question: |
+  Is there a skeleton inside of you?
+yesno: user.skeleton_belief
+
+---
+
+question: |
+  Please indicate all applicable qualities of your skeleton.
+fields:
+  - spooky: user.spooky
+    datatype: yesnowide
+  - scary: user.scary
+    datatype: yesnowide
+---
+
+question: |
+  Your skeleton would be most likely to:
+field: user.skeleton_action 
+choices:
+  - send shivers down spines
+  - shock souls
+  - seal dooms
+  - sause shakes and shudders in surprise
+  
+---
+
+question: Please provide the sigil of your skeleton.
+signature: user.sigil
