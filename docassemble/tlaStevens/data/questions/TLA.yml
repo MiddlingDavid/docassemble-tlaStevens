@@ -1,52 +1,69 @@
-mandatory: true
-question: |
-  Hello, ${ user.possessive('skeleton') }.
-Subquestion: |
-  
-  You live with ${ cohabitants} 's skeletons.
-
-  Your meat prison is aware of you: ${ user.skeleton_belief}.
-  
-  You are spooky: ${ user.spooky }.
-  
-  You are scary: ${ user.scary }.
-  
-  You ${ user.skeleton_action }. I think that's pretty neat.
-  
-  Your sigil is: ${ user.sigil }
-  
+objects:
+  - user: Individual
+  - cohabitants: DAList.using(object_type=Individual) 
 ---
+mandatory: true
+question: Results
+attachments:
+  - name: Document
+    filename: document
+    content: |
+     Hello, ${ user.possessive('skeleton') }.
+     
+     % if len(cohabitants) > 0:
+     You live with ${ cohabitants}.
+     % else:
+     You live alone.
+     % endif
 
+     % if user.skeleton_belief:
+     Your meat prison is aware of you.
+     % else:
+     You have not made yourself known.
+     % endif
+     
+     % if user.scary:
+     You are scary.
+     % endif
+     
+     % if user.spooky:
+     You are spooky.
+     % endif
+     
+     % if not user.spooky and not user.scary:
+     You are neither spooky nor scary. You must try harder.
+     % endif
+     
+     % if user.legal_aid:
+     You qualify for legal aid! Please wait for approximately one (1) week for further instructions.
+     
+     % else:
+     Unfortunately, you do not qualify for legal aid. Please try again in approximately one (1) week.
+     
+     % endif
+     
+     You ${ user.skeleton_action }. I think that's pretty neat.
+     Your sigil is: ${ user.sigil } 
+     
+     Today's date is ${ format_date(today(), format='EEEE, MMMM d, yyyy') }, however ${ format_date(today(), format='yyyy.MM.dd') } would be the superior formatting.
+---
 generic object: Individual
 question: |
   What is ${ x.object_possessive('name') }?
 fields:
   - First Name: x.name.first
-  - Second Name: x.name.last
-  
+  - Second Name: x.name.last  
 ---
-
-objects:
-  - user: Individual
-  - cohabitants: DAList.using(object_type=Individual)
-  
----
-
 question: Do you live with anyone?
 yesno: cohabitants.there_are_any
-
 ---
-
 question: Do you live with anyone else?
 yesno: cohabitants.there_is_another
-
 ---
 question: |
   Is there a skeleton inside of you?
 yesno: user.skeleton_belief
-
 ---
-
 question: |
   Please indicate all applicable qualities of your skeleton.
 fields:
@@ -55,7 +72,6 @@ fields:
   - scary: user.scary
     datatype: yesnowide
 ---
-
 question: |
   Your skeleton would be most likely to:
 field: user.skeleton_action 
@@ -63,9 +79,10 @@ choices:
   - send shivers down spines
   - shock souls
   - seal dooms
-  - sause shakes and shudders in surprise
-  
+  - cause shakes and shudders in surprise
 ---
-
 question: Please provide the sigil of your skeleton.
 signature: user.sigil
+---
+question: Do you qualify for legal aid?
+yesno: user.legal_aid
