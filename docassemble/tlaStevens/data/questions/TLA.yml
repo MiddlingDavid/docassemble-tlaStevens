@@ -8,44 +8,62 @@ attachments:
   - name: Document
     filename: document
     content: |
-     Hello, ${ user.possessive('skeleton') }.
+     Hello, ${ user }.
      
      % if len(cohabitants) > 0:
      You live with ${ cohabitants}.
      % else:
      You live alone.
      % endif
-
-     % if user.skeleton_belief:
-     Your meat prison is aware of you.
-     % else:
-     You have not made yourself known.
-     % endif
      
-     % if user.scary:
-     You are scary.
-     % endif
-     
-     % if user.spooky:
-     You are spooky.
-     % endif
-     
-     % if not user.spooky and not user.scary:
-     You are neither spooky nor scary. You must try harder.
-     % endif
-     
-     % if user.legal_aid:
+     % if user.Qualify:
      You qualify for legal aid! Please wait for approximately one (1) week for further instructions.
-     
      % else:
-     Unfortunately, you do not qualify for legal aid. Please try again in approximately one (1) week.
-     
+     Unfortunately, you do not qualify for legal aid.
      % endif
      
-     You ${ user.skeleton_action }. I think that's pretty neat.
-     Your sigil is: ${ user.sigil } 
+     % if user.LawyerAfford:
+     You said that you can afford a lawyer.
+     % else:
+     You said that you cannot afford a lawyer.
+       % if user.Lawyer:
+     You said that you have a lawyer,
+         % if user.LawyerActing:
+     and that they are acting for you.
+         % else:
+     but that they are not acting for you.
+         % endif
+       % else:
+     You said that you do not have a lawyer.
+       % endif
      
-     Today's date is ${ format_date(today(), format='EEEE, MMMM d, yyyy') }, however ${ format_date(today(), format='yyyy.MM.dd') } would be the superior formatting.
+       % if user.MatterAppeal:
+     You said that you are appealing a matter on which you received LAA assistance.
+       % else:
+     You said that you are not appealing a matter on which you you received LAA assistance.
+     
+         % if not user.LivesInAlberta:
+     You said that you do not live in Alberta.
+         % else:
+     You said that you live in Alberta.
+     
+           % if not user.MatterAlberta:
+     You said that your legal matter is not located in Alberta.
+           % else:
+     You said that your legal matter is located in Alberta
+             % if user.MatterFamily:
+     and is a family law matter.
+             % elif user.MatterCriminal:
+     and is a criminal law matter.
+             % else:
+     but is neither a family law nor a criminal law matter.
+             % endif
+           % endif
+         % endif
+       % endif
+     % endif
+     
+     Today's date is ${ format_date(today(), format='EEEE, MMMM d, yyyy') }, which can also be written as ${ format_date(today(), format='yyyy.MM.dd') }.
 ---
 generic object: Individual
 question: |
@@ -54,35 +72,50 @@ fields:
   - First Name: x.name.first
   - Second Name: x.name.last  
 ---
+code:  |
+  if  user.LawyerAfford or (user.Lawyer and user.LawyerActing):
+    user.Represented = True
+  else:
+    user.Represented = False
+---
+code:  |
+  if user.MatterAppeal or (user.LivesInAlberta and user.MatterAlberta and (user.MatterFamily or user.MatterCriminal)):
+    user.Residency = True
+  else:
+    user.Residency = False
+---
+code: |
+  if not user.Represented and user.Residency:
+    user.Qualify = True
+  else:
+    user.Qualify = False
+---
 question: Do you live with anyone?
 yesno: cohabitants.there_are_any
 ---
 question: Do you live with anyone else?
 yesno: cohabitants.there_is_another
 ---
-question: |
-  Is there a skeleton inside of you?
-yesno: user.skeleton_belief
+question: Do you have a lawyer?
+yesno: user.Lawyer
 ---
-question: |
-  Please indicate all applicable qualities of your skeleton.
-fields:
-  - spooky: user.spooky
-    datatype: yesnowide
-  - scary: user.scary
-    datatype: yesnowide
+question: Is that lawyer still acting for you?
+yesno: user.LawyerActing
 ---
-question: |
-  Your skeleton would be most likely to:
-field: user.skeleton_action 
-choices:
-  - send shivers down spines
-  - shock souls
-  - seal dooms
-  - cause shakes and shudders in surprise
+question: Can you afford a lawyer?
+yesno: user.LawyerAfford
 ---
-question: Please provide the sigil of your skeleton.
-signature: user.sigil
+question: Are you appealing a decision on which you have previously gotten help from legal aid?
+yesno: user.MatterAppeal
 ---
-question: Do you qualify for legal aid?
-yesno: user.legal_aid
+question: Do you live in Alberta?
+yesno: user.LivesInAlberta
+---
+question: Is your legal matter located in Alberta?
+yesno: user.MatterAlberta
+---
+question: Is your legal matter a family law matter?
+yesno: user.MatterFamily
+---
+question: Is your legal matter a criminal law matter?
+yesno: user.MatterCriminal
