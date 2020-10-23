@@ -1,8 +1,46 @@
-initial: True
+default role: client
 code: |
-  set_info(user=user)
-  MaxMonthlyIncome = [1668, 2066, 2940, 3178, 3416, 3655]
-  MaxYearlyIncome = [20021, 24788, 35275, 38134, 40995, 43855]
+  multi_user = True
+  reviewer_email = "jmorris@ualberta.ca"
+  role = 'client'
+  if user_logged_in() and user_info().email == reviewer_email:
+    role = 'reviewer'
+  set_info(user=user, role=role)
+---
+event: role_event
+question: Waiting on Another User
+subquestion: |
+  You are not authorized to look at the next screen of this interview.
+  
+  % if 'client' in role_needed:
+  We are waiting for the client, and you are a reviewer.
+  % elif 'reviewer' in role_needed:
+  We are waiting for the reviewer, and you are the client. Please wait for approval while the advice memo is confirmed.
+  % endif
+  
+  Please have the other party go to [this link](${ interview_url() }) to continue.
+buttons: 
+  - Check: refresh
+---
+template: request_notification
+subject: LAW589 Assignment 6
+content: |
+  A document is ready for verification, [click here](${ interview_url() }) to respond.
+---
+template: response_notification
+subject: Response Received
+content: |
+  Your reviewer has provided an answer, [click here](${ interview_url() }) to view it.
+---
+role: reviewer
+question: Response
+subquestion: |
+  Please review the document generated for the user below. 
+  
+  ${ LaaDocument }
+  
+  Do you approve?
+yesno: reviewer_response
 ---
 objects:
   - user: Individual
@@ -18,15 +56,23 @@ mandatory: true
 code:  |
   # Code Flow Block
   user.name.first
+  user.email
   user.Assets.Exists
-
-    
+  LaaDocument
+  request_notification_sent
+  reviewer_response
+  response_notification_sent
 ---
-mandatory: true
-question: Results
-attachments:
+code: |
+  request_notification_sent = send_email(to=reviewer_email,template=request_notification)
+---
+code: |
+  response_notification_sent = send_email(to=user.email,template=response_notification)
+---
+attachment:
   - name: Document
     filename: document
+    variable name: LaaDocument
     content: |
      Hello, ${ user }.
      You have
@@ -128,6 +174,17 @@ attachments:
      
      Today's date is ${ format_date(today(), format='EEEE, MMMM d, yyyy') }, which can also be written as ${ format_date(today(), format='yyyy.MM.dd') }.
 ---
+mandatory: True
+question: |
+  The advice memo generated from your responses was sent to the reviewer who
+  % if reviewer_response:
+  approved the memo. Please see your advice memo below. You may also [download the document](${ LaaDocument.url_for() }).
+  
+  ${ LaaDocument }
+  % else:
+  did not approve the advice memo.
+  % endif
+---
 generic object: Individual
 question: |
   What is ${ x.object_possessive('name') }?
@@ -140,25 +197,32 @@ question:  |
   Please enter ${ x.possessive('financial information') }.
 fields:
   - Do they have any assets?: x.Assets.Exists
-    datatype: yesnoradio
+    datatype: yesnowide
   - What is the value of the assets?: x.Assets.Value
     datatype: currency
-    default: 0
+    show if: x.Assets.Exists
     min: 0
     
   - Have they made any income in the past 30 days?: x.MonthlyIncome.Exists
-    datatype: yesnoradio
+    datatype: yesnowide
   - What is the value of that income?: x.MonthlyIncome.Value
     datatype: currency
-    default: 0
+    show if: x.MonthlyIncome.Exists
     min: 0
     
   - Have they made any income in the past year?: x.YearlyIncome.Exists
-    datatype: yesnoradio
+    datatype: yesnowide
   - What is the value of that income?: x.YearlyIncome.Value
     datatype: currency
-    default: 0
+    show if: x.YearlyIncome.Exists
     min: 0
+---
+question: |
+  What is your e-mail address?
+fields:
+  - E-mail: user.email
+    datatype: email
+    required: True
 ---
 code: |
   cohabitant[i].name.first
@@ -183,17 +247,27 @@ code: |
   else:
     user.Qualify = True
 ---
-reconsider: True
 code: |
-  user.TotalMonthlyIncome = user.MonthlyIncome.Value
-  for i in cohabitant:
-    user.TotalMonthlyIncome = user.TotalMonthlyIncome + i.MonthlyIncome.Value
+  MaxMonthlyIncome = [1668, 2066, 2940, 3178, 3416, 3655]
+  MaxYearlyIncome = [20021, 24788, 35275, 38134, 40995, 43855]
 ---
 reconsider: True
 code: |
-  user.TotalYearlyIncome = user.YearlyIncome.Value
+  user.TotalMonthlyIncome = 0
+  if user.MonthlyIncome.Exists:
+    user.TotalMonthlyIncome += user.MonthlyIncome.Value
   for i in cohabitant:
-    user.TotalYearlyIncome =  user.TotalYearlyIncome + i.YearlyIncome.Value
+    if i.MonthlyIncome.Exists:
+      user.TotalMonthlyIncome += i.MonthlyIncome.Value
+---
+reconsider: True
+code: |
+  user.TotalYearlyIncome = 0
+  if user.YearlyIncome.Exists:
+    user.TotalYearlyIncome += user.YearlyIncome.Value
+  for i in cohabitant:
+    if i.YearlyIncome.Exists:
+      user.TotalYearlyIncome += i.YearlyIncome.Value
 ---
 reconsider: True
 code: |
